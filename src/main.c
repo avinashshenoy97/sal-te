@@ -37,14 +37,16 @@ int main(int argc, char **argv) {
     
     fflush(stdout); fflush(stdin); fflush(stderr);  // flush for correct functionality in CANON mode
     while(1) {
+        fflush(stdout);
         clearScreen();
         print_banners();
         gotoxy(4, 0);
-        renderData(0);
-        gotoxy(te.prompt_row, 0);
-        printf("Line to edit : %s", te.command); fflush(stdout);
+
         switch(te.mode) {
             case COMMAND_MODE:
+                renderData(0);
+                gotoxy(te.prompt_row, 0);
+                printf("Line to edit : %s", te.command); fflush(stdout);
                 processesCommand();
                 break;
             
@@ -53,7 +55,7 @@ int main(int argc, char **argv) {
                 break;
 
             default:
-                error_log("INVALID MODE");
+                fprintf(stderr, "INVALID MODE");
         }
     }
 

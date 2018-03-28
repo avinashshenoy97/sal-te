@@ -96,7 +96,7 @@ void init_safte(char *fileName) {
     while(read(fileFD, &temp, sizeof(char)) > 0 && temp != EOF) {
         // Make space for new character read in
         te.len[te.lines - 1] += 1;
-        if(te.len[te.lines - 1] > currAlloc) {
+        if(te.len[te.lines - 1] > (currAlloc - 1)) {
             check = realloc(te.buf[te.lines - 1], currAlloc + 1024);
             if(check) {
                 currAlloc += 1024;
@@ -137,7 +137,7 @@ void init_safte(char *fileName) {
     }
 
     te.len[te.lines - 1] += 1;
-    if(te.len[te.lines - 1] > currAlloc) {
+    if(te.len[te.lines - 1] > (currAlloc + 1)) {
         check = realloc(te.buf[te.lines - 1], currAlloc + 1024);
         if(check) {
             currAlloc += 1024;
@@ -158,6 +158,17 @@ void init_safte(char *fileName) {
 
 void exit_handler(void) {
     tcsetattr(STDIN_FILENO, TCSAFLUSH, &(te.old));
+    if(lseek(fileFD, 0, SEEK_SET) != 0)
+        perror("Error flushing content");
+
+    int i;
+    for(i = 0 ; i < te.lines ; i++) {
+        write(fileFD, te.buf[i], te.len[i] * sizeof(char));
+        if(i != (te.lines - 1))
+            write(fileFD, "\n", sizeof(char));
+    }
+
+    close(fileFD);
     clearScreen();
 }
 
@@ -282,8 +293,14 @@ void processesCommand() {
         default:
             if(te.mode == COMMAND_MODE) {
                 if(fc[0] == '\n' || fc[0] == '\r') {
-                    error_log("Found newline");
-                    te.mode = CONTENT_MODE;
+                    if(te.cmd > 0) {
+                        error_log("Found newline");
+                        te.mode = CONTENT_MODE;
+                        initContentMode();
+                    }
+                    else {
+                        error_log("Simple enter");
+                    }
                     break;
                 }
                 else {
@@ -341,19 +358,91 @@ char *itoa(int i) {
 }
 
 
+void initContentMode() {
+    error_log("Initialising content mode");
+    
+    uint32_t command = atoi(te.command);
+    error_log("ATOI command = %d", command);
+
+    void *temp;
+    if(command > te.lines) {
+        error_log("Larger command line %d vs %d", command, te.lines);
+        int i = te.lines;
+        temp = realloc(te.buf, command * sizeof(char *));
+        if(temp) {
+            te.buf = temp;
+            temp = realloc(te.len, command * sizeof(int));
+            if(temp) {
+                te.len = temp;
+                for(i = te.lines ; i < command ; i++) {
+                    te.buf[i] = (char *)calloc(1, sizeof(char));
+                    te.len[i] = 0;
+                }
+                te.lines = command;
+            }
+            else {
+                perror("REALLOC error adding lines to len");
+                exit(0);
+            }
+        }
+        else {
+            perror("REALLOC error adding lines");
+            exit(0);
+        }
+    }
+    
+    te.currentLineNo = command;
+    te.currentLen = strlen(te.buf[command-1]);
+    te.currentLine = strdup(te.buf[command-1]);
+    te.currentAlloc = te.currentLen + 1024;
+
+    temp = realloc(te.currentLine, te.currentAlloc * sizeof(char));
+    if(temp)
+        te.currentLine = temp;
+    else {
+        perror("REALLOC currentLine");
+        exit(0);
+    }
+}
+
+
 void processContent() {
+    error_log("Entered processContent");
 
-
+    printf("%d %s", te.currentLineNo, te.currentLine); fflush(stdout);
+    error_log("%d %s", te.currentLineNo, te.currentLine);
+    
     char c = getPressedKey();
-    //int pos = strlen(te.buf[]);
-
     switch(c) {
         case IS_CTRL_KEY('k'):
-            //pos = 0;
+            error_log("Control K found!");
+            te.currentLen = 0;
+            te.currentLine[te.currentLen] = 0;
             break;
 
         case IS_CTRL_KEY('q'):
+            error_log("Control Q found!");
             exit(0);
             break;
+
+        case '\n': case '\r':
+            free(te.buf[te.currentLineNo - 1]);
+            te.buf[te.currentLineNo - 1] = te.currentLine;
+            te.len[te.currentLineNo - 1] = te.currentLen;
+            te.currentAlloc = 0;
+            te.currentLen = 0;
+            te.currentLine = NULL;
+            te.currentLineNo = 0;
+            te.command[0] = 0;
+            te.mode = COMMAND_MODE;
+            break;
+
+        default:
+            te.currentLen += 1;
+            if(te.currentLen > (te.currentAlloc - 1)) {
+                te.currentAlloc += 1024;
+                te.currentLine = realloc(te.currentLine, te.currentAlloc);
+            }
+            te.currentLine[te.currentLen-1] = c;
     }
 }

@@ -58,6 +58,11 @@ typedef struct safteConfig {
     uint8_t cmd;            // length of command
 
     uint8_t mode;
+
+    char *currentLine;      // CONTENT MODE
+    uint16_t currentLen;
+    uint16_t currentAlloc;
+    uint16_t currentLineNo; 
 }safteConfig;
 
 safteConfig te;
@@ -107,6 +112,11 @@ void processesCommand();
 Render the text content from line `fromLine`.
 */
 void renderData(int fromLine);
+
+/*
+Initialise content mode.
+*/
+void initContentMode();
 
 /*
 Integer to string.
