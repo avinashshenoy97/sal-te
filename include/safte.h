@@ -47,8 +47,11 @@ typedef struct safteConfig {
     uint16_t *len;
     char **buf;
 
-    int x;          // Cursor position
-    int y;
+    uint16_t x;          // Cursor position
+    uint16_t y;
+    uint16_t manual;
+    uint16_t manualX;
+    uint16_t manualY;
 
     int rows;       // available on terminal
     int cols;

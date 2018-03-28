@@ -152,8 +152,9 @@ void init_safte(char *fileName) {
 
     error_log("File read! Lines = %d", te.lines);
 
-    te.x = 0;
-    te.y = 0;
+    te.manual = 0;
+    te.manualX = 0;
+    te.manualY = 0;
 }
 
 
@@ -207,42 +208,49 @@ void enter_raw() {
 
 
 void moveCursor(char dir) {
-    struct winsize w;
-    ioctl(STDOUT_FILENO, TIOCGWINSZ, &w);
+    te.manual = 1;
 
+    uint8_t valid = 0;
     switch(dir) {
         case ARROW_UP:
-            if(te.y > 0) {
-                te.y--;
-                //UP;
+            if(te.y > (TOP_BANNER_LINES + 1)) {
+                te.manualY = te.y - 1;
+                te.manualX = te.x;
+                valid = 1;
             }
             break;
         
         case ARROW_DOWN:
-            if(te.y < w.ws_col) {
-                te.y++;
-                //DOWN;
+            if(te.y < (te.rows - BOTTOM_BANNER_LINES)) {
+                te.manualY = te.y + 1;
+                te.manualX = te.x;
+                valid = 1;
             }
             break;
 
         case ARROW_LEFT:
-            if(te.x > 0) {
-                te.x--;
-                //LEFT;
+            if(te.x > 1) {
+                te.manualX = te.x - 1;
+                te.manualY = te.y;
+                valid = 1;
             }
             break;
         
         case ARROW_RIGHT:
-            if(te.x < w.ws_row) {
-                te.x++;
-                //RIGHT;
+            if(te.x < te.cols) {
+                te.manualX = te.x + 1;
+                te.manualY = te.y;
+                valid = 1;
             }
             break;
 
         default:
-            fprintf(stderr, "Invalid direction");
+            error_log("MOVE CURSOR Invalid direction");
     }
-    gotoxy(te.x + 4, te.y);
+    
+    if(valid) {
+        error_log("MOVE CURSOR valid and applied (%d, %d)", te.manualX, te.manualY);
+    }
 }
 
 
@@ -434,6 +442,12 @@ void processContent() {
     printf("%d %s", te.currentLineNo, te.currentLine); fflush(stdout);
     error_log("(x, y) = (%d, %d) ; %d %s", te.x, te.y, te.currentLineNo, te.currentLine);
     
+    if(te.manual) {
+        gotoxy(te.manualY, te.manualX);
+        te.x = te.manualX;
+        te.y = te.manualY;
+    }
+
     char c = getPressedKey();
     error_log("Content key : %d", c);
     switch(c) {
@@ -448,6 +462,37 @@ void processContent() {
             exit(0);
             break;
 
+        case ESC:
+            c = getPressedKey();
+            if(c == '[') {
+                c = getPressedKey();
+                switch(c) {
+                    case 'A':
+                        error_log("UP");
+                        moveCursor(ARROW_UP);
+                        break;
+
+                    case 'B':
+                        error_log("DOWN");
+                        moveCursor(ARROW_DOWN);
+                        break;
+
+                    case 'C':
+                        error_log("RIGHT");
+                        moveCursor(ARROW_RIGHT);
+                        break;
+
+                    case 'D':
+                        error_log("LEFT");
+                        moveCursor(ARROW_LEFT);
+                        break;
+
+                    default:
+                        error_log("Invalid escape sequence!");
+                }
+            }
+            break;
+        
         case 127:
             if(te.currentLen) {
                 error_log("Content bck : %c", te.currentLine[te.currentLen]);
