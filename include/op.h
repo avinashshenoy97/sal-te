@@ -42,7 +42,6 @@
 #define BOLDCYAN    "\033[1m\033[36m"      /* Bold Cyan */
 #define BOLDWHITE   "\033[1m\033[37m"      /* Bold White */
 
-#define gotoxy(x,y) printf("\x1b[%d;%dH", (x), (y))
 #define clearScreen() printf(CLEAR TOPLEFT)
 
 
@@ -67,6 +66,11 @@ char *centerify(char *str);
 Clear screen and position cursor at top left corner.
 */
 void fresh_term();
+
+/*
+Goto x, y on terminal.
+*/
+void gotoxy(uint32_t x, uint32_t y);
 
 
 #endif

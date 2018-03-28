@@ -43,12 +43,12 @@ int main(int argc, char **argv) {
         fflush(stdout);
         clearScreen();
         print_banners();
-        gotoxy(4, 0);
+        gotoxy(4, 1);
 
         switch(te.mode) {
             case COMMAND_MODE:
                 renderData(0);
-                gotoxy(te.prompt_row, 0);
+                gotoxy(te.prompt_row, 1);
                 printf("Line to edit : %s", te.command); fflush(stdout);
                 processesCommand();
                 break;

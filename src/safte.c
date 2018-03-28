@@ -32,14 +32,14 @@ void print_banners() {
     struct winsize w;
     ioctl(STDOUT_FILENO, TIOCGWINSZ, &w);
 
-    gotoxy(0, 0);
+    gotoxy(1, 1);
     hprintf(centerify("SAF-TE : The Simple AF Text Editor!"));
     hprintf(centerify(currFile));
 
-    gotoxy(w.ws_row, 0);
+    gotoxy(w.ws_row, 1);
     hprintf(centerify("; ^Q Quit ; ^K Clear Line ;"));
 
-    gotoxy(w.ws_row-2, 0);
+    gotoxy(w.ws_row-2, 1);
     hprintf(centerify("Control Section"));
 }
 
@@ -68,12 +68,12 @@ void init_safte(char *fileName) {
     // Draw terminal
     clearScreen();
     print_banners();
-    gotoxy(4, 0);
+    gotoxy(4, 1);
 
     struct winsize w;
     ioctl(STDOUT_FILENO, TIOCGWINSZ, &w);
 
-    te.rows = w.ws_row - 6;         // rows available for drawing
+    te.rows = w.ws_row;         // rows available for drawing
     te.cols = w.ws_col;
 
     te.prompt_row = w.ws_row - 1;
@@ -415,8 +415,24 @@ void initContentMode() {
 void processContent() {
     error_log("Entered processContent");
 
+    int temp = te.currentLineNo;
+    while(temp) {
+        te.x++;
+        temp /= 10;
+    }
+    error_log("BEFORE adding strings (%d, %d)", te.x, te.y);
+
+    te.x++;
+    te.x += strlen(te.currentLine);
+    error_log("BEFORE adjusting cols (%d, %d)", te.x, te.y);
+
+    while(te.x > te.cols) {
+        te.x -= te.cols;
+        te.y++;
+    }
+
     printf("%d %s", te.currentLineNo, te.currentLine); fflush(stdout);
-    error_log("%d %s", te.currentLineNo, te.currentLine);
+    error_log("(x, y) = (%d, %d) ; %d %s", te.x, te.y, te.currentLineNo, te.currentLine);
     
     char c = getPressedKey();
     error_log("Content key : %d", c);

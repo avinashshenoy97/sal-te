@@ -4,7 +4,7 @@ Handles all printing and output to terminal, cursor positioning on terminal, etc
 
 /* -------------------- Includes -------------------- */
 #include "op.h"
-
+#include "safte.h"
 
 /* -------------------- Function Definitions -------------------- */
 
@@ -91,4 +91,12 @@ char *centerify(char *str) {
 
     error_log("Returning with : %s", ret);
     return ret;
+}
+
+
+void gotoxy(uint32_t x, uint32_t y) {
+    printf("\x1b[%d;%dH", (x), (y));
+    fflush(stdout);
+    te.x = y;
+    te.y = x;
 }
