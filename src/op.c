@@ -22,6 +22,8 @@ static void error_log(char *fmt, ...) {
 
     va_end(args);
 }
+#else
+#define error_log(...) ;
 #endif
 
 
@@ -89,8 +91,4 @@ char *centerify(char *str) {
 
     error_log("Returning with : %s", ret);
     return ret;
-}
-
-void fresh_term() {
-    printf(CLEAR TOPLEFT);
 }

@@ -1,3 +1,9 @@
+# vscode
+.vscode/
+
+# saf-te executable
+te
+
 # Prerequisites
 *.d
 

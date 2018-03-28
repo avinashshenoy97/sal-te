@@ -2,7 +2,7 @@ srcfiles = ./src/
 includes = ./include/
 files = $(srcfiles)main.c $(srcfiles)safte.c $(srcfiles)op.c
 
-all: drun
+all: compile
 
 run: compile
 	./te

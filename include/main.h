@@ -1,6 +1,12 @@
+#ifndef MAIN_H
+#define MAIN_H
+
 /* -------------------- Standard Libraries -------------------- */
 #include <stdio.h>
+#include <stdlib.h>
+#include <ctype.h>
 #include <string.h>
+#include <time.h>
 
 
 /* -------------------- System Libraries -------------------- */
@@ -8,8 +14,13 @@
 #include <fcntl.h>
 
 
+/* -------------------- Macros -------------------- */
+
+
 /* -------------------- Globals -------------------- */
 
 
 /* -------------------- Function Prototypes -------------------- */
 
+
+#endif
