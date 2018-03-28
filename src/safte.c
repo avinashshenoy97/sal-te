@@ -136,8 +136,9 @@ void init_safte(char *fileName) {
             te.buf[te.lines - 1][te.len[te.lines - 1] - 1] = temp;
     }
 
-    te.len[te.lines - 1] += 1;
-    if(te.len[te.lines - 1] > (currAlloc + 1)) {
+    error_log("check1");
+
+    if(te.len[te.lines - 1] > (currAlloc - 1)) {
         check = realloc(te.buf[te.lines - 1], currAlloc + 1024);
         if(check) {
             currAlloc += 1024;
@@ -158,12 +159,15 @@ void init_safte(char *fileName) {
 
 void exit_handler(void) {
     tcsetattr(STDIN_FILENO, TCSAFLUSH, &(te.old));
-    if(lseek(fileFD, 0, SEEK_SET) != 0)
-        perror("Error flushing content");
+    
+    ftruncate(fileFD, 0);
+    if(lseek(fileFD, 0, SEEK_SET) < 0)
+        perror("LSEEK error while flushing!");
 
     int i;
     for(i = 0 ; i < te.lines ; i++) {
-        write(fileFD, te.buf[i], te.len[i] * sizeof(char));
+        error_log("Writing line %d : %d : %s", i+1, te.len[i], te.buf[i]);
+        write(fileFD, te.buf[i], (te.len[i]) * sizeof(char));
         if(i != (te.lines - 1))
             write(fileFD, "\n", sizeof(char));
     }
@@ -396,6 +400,8 @@ void initContentMode() {
     te.currentLine = strdup(te.buf[command-1]);
     te.currentAlloc = te.currentLen + 1024;
 
+    error_log("INIT CURRLEN %d", te.currentLen);
+
     temp = realloc(te.currentLine, te.currentAlloc * sizeof(char));
     if(temp)
         te.currentLine = temp;
@@ -413,6 +419,7 @@ void processContent() {
     error_log("%d %s", te.currentLineNo, te.currentLine);
     
     char c = getPressedKey();
+    error_log("Content key : %d", c);
     switch(c) {
         case IS_CTRL_KEY('k'):
             error_log("Control K found!");
@@ -423,6 +430,14 @@ void processContent() {
         case IS_CTRL_KEY('q'):
             error_log("Control Q found!");
             exit(0);
+            break;
+
+        case 127:
+            if(te.currentLen) {
+                error_log("Content bck : %c", te.currentLine[te.currentLen]);
+                te.currentLen--;
+                te.currentLine[te.currentLen] = 0;
+            }
             break;
 
         case '\n': case '\r':
@@ -444,5 +459,6 @@ void processContent() {
                 te.currentLine = realloc(te.currentLine, te.currentAlloc);
             }
             te.currentLine[te.currentLen-1] = c;
+            error_log("ADDED Content key : %d", c);
     }
 }

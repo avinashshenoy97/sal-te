@@ -7,6 +7,9 @@ The file that contains the main function and delegates work to other modules.
 #include "safte.h"
 #include "op.h"
 
+#ifdef DEBUG_MODE
+static void error_log(char *fmt, ...);
+#endif
 
 /* ==================== Main ==================== */
 
@@ -34,7 +37,7 @@ int main(int argc, char **argv) {
     atexit(exit_handler);
 
     // being TE I/O
-    
+    error_log("Starting process loop");
     fflush(stdout); fflush(stdin); fflush(stderr);  // flush for correct functionality in CANON mode
     while(1) {
         fflush(stdout);
@@ -62,3 +65,22 @@ int main(int argc, char **argv) {
     free(temp);
     return 0;
 }
+
+
+/* Error logger function for THIS file ONLY. */
+#ifdef DEBUG_MODE
+static void error_log(char *fmt, ...) {
+    va_list args;
+    va_start(args, fmt);
+
+    dprintf(STDERR_FILENO, "\n");
+    dprintf(STDERR_FILENO, "SAFTE : ");
+    vdprintf(STDERR_FILENO, fmt, args);
+    dprintf(STDERR_FILENO, "\n");
+    fflush(stderr);
+
+    va_end(args);
+}
+#else
+#define error_log(...) ;
+#endif

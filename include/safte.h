@@ -62,7 +62,9 @@ typedef struct safteConfig {
     char *currentLine;      // CONTENT MODE
     uint16_t currentLen;
     uint16_t currentAlloc;
-    uint16_t currentLineNo; 
+    uint16_t currentLineNo;
+
+    uint16_t renderOffset;
 }safteConfig;
 
 safteConfig te;
