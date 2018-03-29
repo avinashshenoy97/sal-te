@@ -4,7 +4,7 @@ Handles all printing and output to terminal, cursor positioning on terminal, etc
 
 /* -------------------- Includes -------------------- */
 #include "op.h"
-#include "safte.h"
+#include "salte.h"
 
 /* -------------------- Function Definitions -------------------- */
 

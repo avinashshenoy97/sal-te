@@ -1,5 +1,5 @@
-#ifndef SAFTE_H
-#define SAFTE_H
+#ifndef SALTE_H
+#define SALTE_H
 
 /* -------------------- Standard Libraries -------------------- */
 #include <stdio.h>
@@ -40,7 +40,7 @@ uint16_t horizontal, vertical;
 char *currFile;
 int fileFD;
 
-typedef struct safteConfig {
+typedef struct salteConfig {
     struct termios old;    // terminal properties
     
     u_int32_t lines;        // Data
@@ -72,9 +72,9 @@ typedef struct safteConfig {
     uint16_t currentLineNo;
 
     uint16_t renderOffset;
-}safteConfig;
+}salteConfig;
 
-safteConfig te;
+salteConfig te;
 
 
 /* -------------------- Function Prototypes -------------------- */
@@ -83,7 +83,7 @@ safteConfig te;
 void handle_signals(int signo);
 
 /*
-Print SAF-TE banners on first and last row of terminal.
+Print SAL-TE banners on first and last row of terminal.
 */
 void print_banners();
 
@@ -95,10 +95,10 @@ void updateOnScreen();
 /*
 Initalize the text editor, clear screen, print the header and position cursor on line 2 of terminal.
 */
-void init_safte(char *fileName);
+void init_salte(char *fileName);
 
 /*
-The exit handler for SAFTE.
+The exit handler for SALTE.
 */
 void exit_handler(void);
 

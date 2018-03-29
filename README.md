@@ -6,12 +6,12 @@ Simple Af Line-based Text Editor! (Included with PISTA shell : https://github.co
 
 ## Demo :
 
-![Demo with Save](https://github.com/avinashshenoy97/saf-te/blob/master/extras/demo_save.gif)
+![Demo with Save](https://github.com/avinashshenoy97/sal-te/blob/master/extras/demo_save.gif)
 
 
 Quit without saving :
 
-![Demo without Save](https://github.com/avinashshenoy97/saf-te/blob/master/extras/demo_nosave.gif)
+![Demo without Save](https://github.com/avinashshenoy97/sal-te/blob/master/extras/demo_nosave.gif)
 
 
 ---

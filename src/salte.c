@@ -3,7 +3,7 @@ Text editor implementation.
 */
 
 /* -------------------- Includes -------------------- */
-#include "safte.h"
+#include "salte.h"
 #include "op.h"
 
 
@@ -16,7 +16,7 @@ static void error_log(char *fmt, ...) {
     va_start(args, fmt);
 
     dprintf(STDERR_FILENO, "\n");
-    dprintf(STDERR_FILENO, "SAFTE : ");
+    dprintf(STDERR_FILENO, "SALTE : ");
     vdprintf(STDERR_FILENO, fmt, args);
     dprintf(STDERR_FILENO, "\n");
     fflush(stderr);
@@ -33,11 +33,11 @@ void print_banners() {
     ioctl(STDOUT_FILENO, TIOCGWINSZ, &w);
 
     gotoxy(1, 1);
-    hprintf(centerify("SAF-TE : The Simple AF Text Editor!"));
+    hprintf(centerify("SAL-TE : The Simple Af Line-based Text Editor!"));
     hprintf(centerify(currFile));
 
     gotoxy(w.ws_row, 1);
-    hprintf(centerify("; ^Q Quit ; ^X Quit without save ; ^K Clear Line ;"));
+    hprintf(centerify("; ^Q Quit ; ^X Quit without save ; ^K Clear Line ; ^G Goto Line ;"));
 
     gotoxy(w.ws_row-2, 1);
     hprintf(centerify("Control Section"));
@@ -52,7 +52,7 @@ void updateOnScreen() {
 }
 
 
-void init_safte(char *fileName) {
+void init_salte(char *fileName) {
     // Open the file
     fileFD = open(fileName, O_RDWR | O_CREAT, 0644);
     if(fileFD > 0) {
@@ -295,7 +295,7 @@ void processesCommand() {
             te.cmd--;
             te.command[te.cmd] = 0;
             break;
-            
+
         case IS_CTRL_KEY('q'):
             te.flush = 1;
             exit(0);
@@ -314,11 +314,32 @@ void processesCommand() {
 
         case ESC:
             fc[1] = getPressedKey();
-            fc[2] = getPressedKey();
-            processed += 2;
             if(fc[1] == '[') {
-                error_log("Arrow key in command mode");
-                break;
+                fc[2] = getPressedKey();
+                switch(fc[2]) {
+                    case 'A':
+                        error_log("CMD UP");
+                        if(te.renderOffset > 0)
+                            te.renderOffset--;
+                        break;
+
+                    case 'B':
+                        error_log("CMD DOWN");
+                        if(te.renderOffset < (te.lines-1))
+                            te.renderOffset++;
+                        break;
+
+                    case 'C':
+                        error_log("CMD RIGHT");
+                        break;
+
+                    case 'D':
+                        error_log("CMD LEFT");
+                        break;
+
+                    default:
+                        error_log("Invalid escape sequence!");
+                }
             }
             break;
 
@@ -358,20 +379,32 @@ void processesCommand() {
 void renderData(int fromLine) {
     error_log("Entered renderedData with %d", fromLine);
 
-    int i;
-    int rowsUsed = 0;
+    int i, j;
+    int rowsUsed = 0, spaceLeft = 0, temp;
     char *lineNo = NULL;
 
     for(i = fromLine ; i < te.lines && rowsUsed < (te.rows - TOP_BANNER_LINES - BOTTOM_BANNER_LINES) ; i++) {
         lineNo = itoa(i+1);
-        rowsUsed += ((te.len[i] + strlen(lineNo) + 1) / te.cols) + 1; // rows that will be used by this line
+        temp = ((te.len[i] + strlen(lineNo) + 1) / te.cols) + 1;
         // len + n to account for line number printing
-        if(rowsUsed >= (te.rows - TOP_BANNER_LINES - BOTTOM_BANNER_LINES))
+        if((rowsUsed + temp) >= (te.rows - TOP_BANNER_LINES - BOTTOM_BANNER_LINES))
             break;
-        
+        else
+            rowsUsed += temp; // rows that will be used by this line
+
         printf("%s %s\n\r", lineNo, te.buf[i]);
-        fflush(stdout);
     }
+
+    if(rowsUsed < (te.rows - TOP_BANNER_LINES - BOTTOM_BANNER_LINES) && i != te.lines) {
+        printf("%s ", lineNo);
+        spaceLeft = ((te.rows - TOP_BANNER_LINES - BOTTOM_BANNER_LINES) - rowsUsed + 1) * te.cols;
+        spaceLeft -= (1 + strlen(lineNo));
+        error_log("Space left : %d", spaceLeft);
+        for(j = 0 ; j < te.len[i] && j < spaceLeft ; j++) {
+            printf("%c", te.buf[i][j]);
+        }
+    }
+    fflush(stdout);
 }
 
 

@@ -18,6 +18,7 @@
 #define STARTH "\033[7m"
 #define ENDH "\033[27m"
 #define CLEAR "\033[2J"
+#define RESETTERM "\e[3J"
 #define TOPLEFT "\033[1;1H"
 #define UP printf("\x1b[1A")
 #define DOWN printf("\x1b[1B")
@@ -42,7 +43,7 @@
 #define BOLDCYAN    "\033[1m\033[36m"      /* Bold Cyan */
 #define BOLDWHITE   "\033[1m\033[37m"      /* Bold White */
 
-#define clearScreen() printf(CLEAR TOPLEFT)
+#define clearScreen() printf(CLEAR RESETTERM TOPLEFT)
 
 #define TOP_BANNER_LINES 3
 #define BOTTOM_BANNER_LINES 3

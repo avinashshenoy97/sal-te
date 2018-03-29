@@ -13,6 +13,7 @@ log
 session.sh
 .DS_Store
 .DS_STORE
+log*
 
 # saf-te executable
 te

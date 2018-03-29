@@ -4,7 +4,7 @@ The file that contains the main function and delegates work to other modules.
 
 /* -------------------- Includes -------------------- */
 #include "main.h"
-#include "safte.h"
+#include "salte.h"
 #include "op.h"
 
 #ifdef DEBUG_MODE
@@ -16,6 +16,7 @@ static void error_log(char *fmt, ...);
 /* ==================== Main ==================== */
 
 int main(int argc, char **argv) {
+    clearScreen();
     enter_raw();
 
     char *temp = NULL;
@@ -32,7 +33,7 @@ int main(int argc, char **argv) {
         temp = strdup(asctime(timeinfo));
         temp[strlen(temp) - 1] = 0;
     }
-    init_safte(temp);
+    init_salte(temp);
 
 
     // Register Exit Handler
@@ -76,7 +77,7 @@ static void error_log(char *fmt, ...) {
     va_start(args, fmt);
 
     dprintf(STDERR_FILENO, "\n");
-    dprintf(STDERR_FILENO, "SAFTE : ");
+    dprintf(STDERR_FILENO, "SALTE : ");
     vdprintf(STDERR_FILENO, fmt, args);
     dprintf(STDERR_FILENO, "\n");
     fflush(stderr);
