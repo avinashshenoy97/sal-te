@@ -52,6 +52,7 @@ typedef struct safteConfig {
     uint16_t manual;
     uint16_t manualX;
     uint16_t manualY;
+    uint16_t pos;       // cursor position within a line (if cursor is moved with arrows)
 
     int rows;       // available on terminal
     int cols;

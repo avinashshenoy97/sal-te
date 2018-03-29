@@ -208,15 +208,17 @@ void enter_raw() {
 
 
 void moveCursor(char dir) {
-    te.manual = 1;
+    if(te.manual == 0) {
+        te.manual = 1;
+        te.pos = te.currentLen;
+    }
 
-    uint8_t valid = 0;
     switch(dir) {
         case ARROW_UP:
             if(te.y > (TOP_BANNER_LINES + 1)) {
                 te.manualY = te.y - 1;
                 te.manualX = te.x;
-                valid = 1;
+                te.pos -= te.cols;
             }
             break;
         
@@ -224,7 +226,7 @@ void moveCursor(char dir) {
             if(te.y < (te.rows - BOTTOM_BANNER_LINES)) {
                 te.manualY = te.y + 1;
                 te.manualX = te.x;
-                valid = 1;
+                te.pos += te.cols;
             }
             break;
 
@@ -232,25 +234,32 @@ void moveCursor(char dir) {
             if(te.x > 1) {
                 te.manualX = te.x - 1;
                 te.manualY = te.y;
-                valid = 1;
             }
+            else {
+                te.x = te.cols;
+                moveCursor(ARROW_UP);
+            }
+            te.pos -= 1;
             break;
         
         case ARROW_RIGHT:
             if(te.x < te.cols) {
                 te.manualX = te.x + 1;
                 te.manualY = te.y;
-                valid = 1;
             }
+            else {
+                te.x = 0;
+                moveCursor(ARROW_DOWN);
+            }
+            te.pos += 1;
             break;
 
         default:
             error_log("MOVE CURSOR Invalid direction");
+            return;
     }
     
-    if(valid) {
-        error_log("MOVE CURSOR valid and applied (%d, %d)", te.manualX, te.manualY);
-    }
+    error_log("MOVE CURSOR applied (%d, %d)", te.manualX, te.manualY);
 }
 
 
@@ -281,23 +290,7 @@ void processesCommand() {
             fc[2] = getPressedKey();
             processed += 2;
             if(fc[1] == '[') {
-                /*switch(fc[2]) {
-                    case 'A':
-                        moveCursor(ARROW_UP);
-                        break;
-                    
-                    case 'B':
-                        moveCursor(ARROW_DOWN);
-                        break;
-                    
-                    case 'C':
-                        moveCursor(ARROW_RIGHT);
-                        break;
-
-                    case 'D':
-                        moveCursor(ARROW_LEFT);
-                        break;
-                }*/
+                error_log("Arrow key in command mode");
                 break;
             }
             break;
@@ -332,10 +325,12 @@ void renderData(int fromLine) {
     int rowsUsed = 0;
     char *lineNo = NULL;
 
-    for(i = 0 ; i < te.lines && rowsUsed < te.rows ; i++) {
+    for(i = 0 ; i < te.lines && rowsUsed < (te.rows - TOP_BANNER_LINES - BOTTOM_BANNER_LINES) ; i++) {
         lineNo = itoa(i+1);
         rowsUsed += ((te.len[i] + strlen(lineNo) + 1) / te.cols) + 1; // rows that will be used by this line
         // len + n to account for line number printing
+        if(rowsUsed >= (te.rows - TOP_BANNER_LINES - BOTTOM_BANNER_LINES))
+            break;
         
         printf("%s %s\n\r", lineNo, te.buf[i]);
         fflush(stdout);
@@ -446,6 +441,7 @@ void processContent() {
         gotoxy(te.manualY, te.manualX);
         te.x = te.manualX;
         te.y = te.manualY;
+        error_log("POS : %d", te.pos);
     }
 
     char c = getPressedKey();
@@ -510,16 +506,33 @@ void processContent() {
             te.currentLine = NULL;
             te.currentLineNo = 0;
             te.command[0] = 0;
+            te.cmd = 0;
+            te.manual = 0;
             te.mode = COMMAND_MODE;
             break;
 
         default:
-            te.currentLen += 1;
-            if(te.currentLen > (te.currentAlloc - 1)) {
-                te.currentAlloc += 1024;
-                te.currentLine = realloc(te.currentLine, te.currentAlloc);
+            if(te.manual) {
+                if(te.pos >= te.currentLen) {
+                    while((te.pos+1) > te.currentAlloc) {
+                        te.currentAlloc += 1024;
+                        te.currentLine = realloc(te.currentLine, te.currentAlloc * sizeof(char));
+                    }
+                    int i;
+                    for(i = te.currentLen ; i < te.pos ; i++)
+                        te.currentLine[i] = ' ';
+                    te.currentLen = te.pos + 1;
+                    moveCursor(ARROW_RIGHT);
+                }
             }
-            te.currentLine[te.currentLen-1] = c;
+            else{
+                te.currentLen += 1;
+                if(te.currentLen > (te.currentAlloc - 1)) {
+                    te.currentAlloc += 1024;
+                    te.currentLine = realloc(te.currentLine, te.currentAlloc);
+                }
+            }
+            te.currentLine[te.currentLen - 1] = c;
             error_log("ADDED Content key : %d", c);
     }
 }
