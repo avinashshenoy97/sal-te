@@ -75,7 +75,14 @@ void init_safte(char *fileName) {
 
     te.rows = w.ws_row;         // rows available for drawing
     te.cols = w.ws_col;
+    te.renderOffset = 0;
 
+    // command prompts
+    te.prompt = (char **)malloc(sizeof(char *) * 2);
+    te.prompt[0] = strdup("Line to edit");
+    te.prompt[1] = strdup("Goto line");
+    te.p = 0;
+    
     te.prompt_row = w.ws_row - 1;
     te.cmd = 0;
     te.command[0] = 0;
@@ -284,6 +291,11 @@ void processesCommand() {
     int processed = 1;
 
     switch(fc[0]) {
+        case 127:
+            te.cmd--;
+            te.command[te.cmd] = 0;
+            break;
+            
         case IS_CTRL_KEY('q'):
             te.flush = 1;
             exit(0);
@@ -293,6 +305,11 @@ void processesCommand() {
             error_log("CMD Control x found!");
             te.flush = 0;
             exit(0);
+            break;
+
+        case IS_CTRL_KEY('g'):
+            error_log("CMD Control G found!");
+            te.p = 1;
             break;
 
         case ESC:
@@ -310,8 +327,18 @@ void processesCommand() {
                 if(fc[0] == '\n' || fc[0] == '\r') {
                     if(te.cmd > 0) {
                         error_log("Found newline");
-                        te.mode = CONTENT_MODE;
-                        initContentMode();
+                        if(te.p == 0) {
+                            te.mode = CONTENT_MODE;
+                            initContentMode();
+                        }
+                        else if(te.p == 1) {
+                            te.command[te.cmd] = 0;
+                            te.renderOffset = atoi(te.command) - 1;
+                            error_log("Going to %d", te.renderOffset);
+                            te.cmd = 0;
+                            te.command[0] = 0;
+                            te.p = 0;
+                        }
                     }
                     else {
                         error_log("Simple enter");
@@ -335,7 +362,7 @@ void renderData(int fromLine) {
     int rowsUsed = 0;
     char *lineNo = NULL;
 
-    for(i = 0 ; i < te.lines && rowsUsed < (te.rows - TOP_BANNER_LINES - BOTTOM_BANNER_LINES) ; i++) {
+    for(i = fromLine ; i < te.lines && rowsUsed < (te.rows - TOP_BANNER_LINES - BOTTOM_BANNER_LINES) ; i++) {
         lineNo = itoa(i+1);
         rowsUsed += ((te.len[i] + strlen(lineNo) + 1) / te.cols) + 1; // rows that will be used by this line
         // len + n to account for line number printing

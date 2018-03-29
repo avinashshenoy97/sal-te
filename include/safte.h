@@ -58,6 +58,8 @@ typedef struct safteConfig {
     int rows;       // available on terminal
     int cols;
 
+    char **prompt;
+    uint8_t p;
     uint16_t prompt_row;    // row to print prompt
     char command[25];       // command
     uint8_t cmd;            // length of command

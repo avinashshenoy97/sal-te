@@ -49,9 +49,9 @@ int main(int argc, char **argv) {
 
         switch(te.mode) {
             case COMMAND_MODE:
-                renderData(0);
+                renderData(te.renderOffset);
                 gotoxy(te.prompt_row, 1);
-                printf("Line to edit : %s", te.command); fflush(stdout);
+                printf("%s : %s", te.prompt[te.p], te.command); fflush(stdout);
                 processesCommand();
                 break;
             

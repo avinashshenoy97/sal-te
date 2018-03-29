@@ -16,7 +16,7 @@ compile:
 # Debug mode
 
 d: dcompile
-	./te $(input) $(log)
+	./te $(input) 2> $(log)
 
 dcompile:
 	cc -g -DDEBUG_MODE -o te -I$(includes) -Wall $(files)
