@@ -55,8 +55,8 @@ typedef struct salteConfig {
     uint16_t manualY;
     uint16_t pos;       // cursor position within a line (if cursor is moved with arrows)
 
-    int rows;       // available on terminal
-    int cols;
+    uint16_t rows;       // available on terminal
+    uint16_t cols;
 
     char **prompt;
     uint8_t p;
@@ -70,6 +70,7 @@ typedef struct salteConfig {
     uint16_t currentLen;
     uint16_t currentAlloc;
     uint16_t currentLineNo;
+    uint16_t currentOffset;
 
     uint16_t renderOffset;
 }salteConfig;

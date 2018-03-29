@@ -218,6 +218,8 @@ void enter_raw() {
 
 
 void moveCursor(char dir) {
+    int temp;
+
     if(te.manual == 0) {
         te.manual = 1;
         te.pos = te.currentLen;
@@ -230,6 +232,10 @@ void moveCursor(char dir) {
                 te.manualX = te.x;
                 te.pos -= te.cols;
             }
+            else {
+                if(te.currentOffset)
+                    te.currentOffset -= te.cols;
+            }
             break;
         
         case ARROW_DOWN:
@@ -237,6 +243,9 @@ void moveCursor(char dir) {
                 te.manualY = te.y + 1;
                 te.manualX = te.x;
                 te.pos += te.cols;
+            }
+            else {
+                te.currentOffset += te.cols;
             }
             break;
 
@@ -472,6 +481,7 @@ void initContentMode() {
     te.currentLen = strlen(te.buf[command-1]);
     te.currentLine = strdup(te.buf[command-1]);
     te.currentAlloc = te.currentLen + 1024;
+    te.currentOffset = 0;
 
     error_log("INIT CURRLEN %d", te.currentLen);
 
@@ -504,7 +514,7 @@ void processContent() {
         te.y++;
     }
 
-    printf("%d %s", te.currentLineNo, te.currentLine); fflush(stdout);
+    printf("%d %s", te.currentLineNo, te.currentLine + te.currentOffset); fflush(stdout);
     error_log("(x, y) = (%d, %d) ; %d %s", te.x, te.y, te.currentLineNo, te.currentLine);
     
     if(te.manual) {
