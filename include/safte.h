@@ -46,6 +46,7 @@ typedef struct safteConfig {
     u_int32_t lines;        // Data
     uint16_t *len;
     char **buf;
+    uint8_t flush;
 
     uint16_t x;          // Cursor position
     uint16_t y;

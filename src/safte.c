@@ -37,7 +37,7 @@ void print_banners() {
     hprintf(centerify(currFile));
 
     gotoxy(w.ws_row, 1);
-    hprintf(centerify("; ^Q Quit ; ^K Clear Line ;"));
+    hprintf(centerify("; ^Q Quit ; ^X Quit without save ; ^K Clear Line ;"));
 
     gotoxy(w.ws_row-2, 1);
     hprintf(centerify("Control Section"));
@@ -86,6 +86,7 @@ void init_safte(char *fileName) {
     char temp;
     int currAlloc = 0;
 
+    te.flush = 0;
     te.lines = 1;
     te.len = (uint16_t *)malloc(sizeof(int) * te.lines);
     te.buf = (char **)malloc(sizeof(char *) * te.lines);
@@ -161,16 +162,18 @@ void init_safte(char *fileName) {
 void exit_handler(void) {
     tcsetattr(STDIN_FILENO, TCSAFLUSH, &(te.old));
     
-    ftruncate(fileFD, 0);
-    if(lseek(fileFD, 0, SEEK_SET) < 0)
-        perror("LSEEK error while flushing!");
+    if(te.flush) {
+        ftruncate(fileFD, 0);
+        if(lseek(fileFD, 0, SEEK_SET) < 0)
+            perror("LSEEK error while flushing!");
 
-    int i;
-    for(i = 0 ; i < te.lines ; i++) {
-        error_log("Writing line %d : %d : %s", i+1, te.len[i], te.buf[i]);
-        write(fileFD, te.buf[i], (te.len[i]) * sizeof(char));
-        if(i != (te.lines - 1))
-            write(fileFD, "\n", sizeof(char));
+        int i;
+        for(i = 0 ; i < te.lines ; i++) {
+            error_log("Writing line %d : %d : %s", i+1, te.len[i], te.buf[i]);
+            write(fileFD, te.buf[i], (te.len[i]) * sizeof(char));
+            if(i != (te.lines - 1))
+                write(fileFD, "\n", sizeof(char));
+        }
     }
 
     close(fileFD);
@@ -248,7 +251,7 @@ void moveCursor(char dir) {
                 te.manualY = te.y;
             }
             else {
-                te.x = 0;
+                te.x = 1;
                 moveCursor(ARROW_DOWN);
             }
             te.pos += 1;
@@ -259,7 +262,7 @@ void moveCursor(char dir) {
             return;
     }
     
-    error_log("MOVE CURSOR applied (%d, %d)", te.manualX, te.manualY);
+    error_log("MOVE CURSOR applied (%d, %d) %d", te.manualX, te.manualY, te.pos);
 }
 
 
@@ -282,6 +285,13 @@ void processesCommand() {
 
     switch(fc[0]) {
         case IS_CTRL_KEY('q'):
+            te.flush = 1;
+            exit(0);
+            break;
+
+        case IS_CTRL_KEY('x'):
+            error_log("CMD Control x found!");
+            te.flush = 0;
             exit(0);
             break;
 
@@ -426,7 +436,7 @@ void processContent() {
     error_log("BEFORE adding strings (%d, %d)", te.x, te.y);
 
     te.x++;
-    te.x += strlen(te.currentLine);
+    te.x += te.currentLen;
     error_log("BEFORE adjusting cols (%d, %d)", te.x, te.y);
 
     while(te.x > te.cols) {
@@ -455,6 +465,13 @@ void processContent() {
 
         case IS_CTRL_KEY('q'):
             error_log("Control Q found!");
+            te.flush = 1;
+            exit(0);
+            break;
+
+        case IS_CTRL_KEY('x'):
+            error_log("Control x found!");
+            te.flush = 0;
             exit(0);
             break;
 
@@ -514,6 +531,7 @@ void processContent() {
         default:
             if(te.manual) {
                 if(te.pos >= te.currentLen) {
+                    error_log("pos >= len");
                     while((te.pos+1) > te.currentAlloc) {
                         te.currentAlloc += 1024;
                         te.currentLine = realloc(te.currentLine, te.currentAlloc * sizeof(char));
@@ -522,8 +540,18 @@ void processContent() {
                     for(i = te.currentLen ; i < te.pos ; i++)
                         te.currentLine[i] = ' ';
                     te.currentLen = te.pos + 1;
-                    moveCursor(ARROW_RIGHT);
                 }
+                else {
+                    te.currentLen += 1;
+                    if(te.currentLen > (te.currentAlloc - 1)) {
+                        te.currentAlloc += 1024;
+                        te.currentLine = realloc(te.currentLine, te.currentAlloc);
+                    }
+                    int i;
+                    for(i = te.currentLen ; i > te.pos ; i--)
+                        te.currentLine[i] = te.currentLine[i-1];
+                }
+                moveCursor(ARROW_RIGHT);
             }
             else{
                 te.currentLen += 1;
@@ -531,8 +559,9 @@ void processContent() {
                     te.currentAlloc += 1024;
                     te.currentLine = realloc(te.currentLine, te.currentAlloc);
                 }
+                te.pos = te.currentLen;
             }
-            te.currentLine[te.currentLen - 1] = c;
+            te.currentLine[te.pos - 1] = c;
             error_log("ADDED Content key : %d", c);
     }
 }

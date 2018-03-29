@@ -9,6 +9,8 @@ The file that contains the main function and delegates work to other modules.
 
 #ifdef DEBUG_MODE
 static void error_log(char *fmt, ...);
+#else
+#define error_log(...) ;
 #endif
 
 /* ==================== Main ==================== */
@@ -81,6 +83,4 @@ static void error_log(char *fmt, ...) {
 
     va_end(args);
 }
-#else
-#define error_log(...) ;
 #endif
