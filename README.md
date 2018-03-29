@@ -4,7 +4,7 @@ Simple Af Line-based Text Editor! (Included with PISTA shell : https://github.co
 
 ---
 
-Demo :
+## Demo :
 
 ![Demo with Save](https://github.com/avinashshenoy97/saf-te/blob/master/extras/demo_save.gif)
 
@@ -16,7 +16,7 @@ Quit without saving :
 
 ---
 
-Primary Contributor
+### Primary Contributor
 
 #### [Avinash Shenoy](https://github.com/avinashshenoy97)
 
