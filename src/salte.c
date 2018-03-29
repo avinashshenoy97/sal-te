@@ -1,5 +1,5 @@
 /*
-Text editor implementation.
+General text editor implementation -- the delegator.
 */
 
 /* -------------------- Includes -------------------- */
@@ -28,31 +28,14 @@ static void error_log(char *fmt, ...) {
 #endif
 
 
-void print_banners() {
-    struct winsize w;
-    ioctl(STDOUT_FILENO, TIOCGWINSZ, &w);
-
-    gotoxy(1, 1);
-    hprintf(centerify("SAL-TE : The Simple Af Line-based Text Editor!"));
-    hprintf(centerify(currFile));
-
-    gotoxy(w.ws_row, 1);
-    hprintf(centerify("; ^Q Quit ; ^X Quit without save ; ^K Clear Line ; ^G Goto Line ;"));
-
-    gotoxy(w.ws_row-2, 1);
-    hprintf(centerify("Control Section"));
-}
-
-
-void updateOnScreen() {
-    struct winsize w;
-    ioctl(STDOUT_FILENO, TIOCGWINSZ, &w);
-
-    maxOnScreen = (w.ws_row - 4) * w.ws_col;
-}
-
-
 void init_salte(char *fileName) {
+    struct winsize w;
+
+    void *check = NULL;
+    char temp;
+    int currAlloc = 0;
+
+
     // Open the file
     fileFD = open(fileName, O_RDWR | O_CREAT, 0644);
     if(fileFD > 0) {
@@ -70,37 +53,31 @@ void init_salte(char *fileName) {
     print_banners();
     gotoxy(4, 1);
 
-    struct winsize w;
+    // Get terminal window size
     ioctl(STDOUT_FILENO, TIOCGWINSZ, &w);
 
     te.rows = w.ws_row;         // rows available for drawing
-    te.cols = w.ws_col;
-    te.renderOffset = 0;
+    te.cols = w.ws_col;         // columns available for drawing
+    te.renderOffset = 0;        // line number to start displaying
 
     // command prompts
     te.prompt = (char **)malloc(sizeof(char *) * 2);
     te.prompt[0] = strdup("Line to edit");
     te.prompt[1] = strdup("Goto line");
-    te.p = 0;
+    te.p = 0;   // current prompt
     
-    te.prompt_row = w.ws_row - 1;
-    te.cmd = 0;
-    te.command[0] = 0;
-    te.mode = COMMAND_MODE;
+    te.prompt_row = w.ws_row - 1;       // where to print prompt
+    te.cmd = 0;                         // length of command
+    te.command[0] = 0;                  // command itself
+    te.mode = COMMAND_MODE;             // initialise mode to command mode
 
-    // Load file data to memory
-    void *check = NULL;
-    char temp;
-    int currAlloc = 0;
-
-    te.flush = 0;
-    te.lines = 1;
-    te.len = (uint16_t *)malloc(sizeof(int) * te.lines);
-    te.buf = (char **)malloc(sizeof(char *) * te.lines);
+    te.flush = 0;                       // turn of automatic flushing
+    te.lines = 1;                       // lines of text present in file (minimum 1 line - could be empty line)
+    te.len = (uint16_t *)malloc(sizeof(int) * te.lines);        // lengths of each line of text
+    te.buf = (char **)malloc(sizeof(char *) * te.lines);        // the lines of text
     te.buf[0] = NULL;
 
-    error_log("Reading file...");
-
+    // Load file data to memory
     while(read(fileFD, &temp, sizeof(char)) > 0 && temp != EOF) {
         // Make space for new character read in
         te.len[te.lines - 1] += 1;
@@ -110,56 +87,49 @@ void init_salte(char *fileName) {
                 currAlloc += 1024;
                 te.buf[te.lines - 1] = check;
             }
-            else {
-                perror("REALLOC FAIL (while buf)");
-            }
+            else perror("REALLOC FAIL (while buf)");
         }
 
-        // If newline, make space for the new line and add nul char to prev line
+        // If newline, make space for the new line and add nul char to end of prev line
         if(temp == '\n' || temp == '\r') {
             te.buf[te.lines - 1][te.len[te.lines - 1]] = 0;
-
             error_log("Line %d done : %s", te.lines, te.buf[te.lines - 1]);
 
-            currAlloc = 0;
+            currAlloc = 0;      // new line to read
             te.lines += 1;
-            check = realloc(te.len, sizeof(int) * te.lines);
-            
+
+            check = realloc(te.len, sizeof(int) * te.lines);        // extend len array
             if(check) {
                 te.len = check;
                 te.len[te.lines - 1] = 0;
             }
-            else
-                perror("REALLOC FAIL (while creating line in len)");
+            else perror("REALLOC FAIL (while creating line in len)");
 
-            check = realloc(te.buf, sizeof(char *) * te.lines);
+            check = realloc(te.buf, sizeof(char *) * te.lines);     // extend data array
             if(check) {
                 te.buf = check;
                 te.buf[te.lines - 1] = NULL;
             }
-            else
-                perror("REALLOC FAIL (while creating line in buf)");
+            else perror("REALLOC FAIL (while creating line in buf)");
         }
         else
-            te.buf[te.lines - 1][te.len[te.lines - 1] - 1] = temp;
+            te.buf[te.lines - 1][te.len[te.lines - 1] - 1] = temp;      // if not new line, add to current line of data
     }
 
-    error_log("check1");
-
+    // Add nul char to end of last line read in
     if(te.len[te.lines - 1] > (currAlloc - 1)) {
         check = realloc(te.buf[te.lines - 1], currAlloc + 1024);
         if(check) {
             currAlloc += 1024;
             te.buf[te.lines - 1] = check;
         }
-        else {
-            perror("REALLOC FAIL (while buf)");
-        }
+        else perror("REALLOC FAIL (while buf)");
     }
     te.buf[te.lines - 1][te.len[te.lines - 1]] = 0;
 
     error_log("File read! Lines = %d", te.lines);
 
+    // Manual mode within content mode (when arrow keys are pressed while editing a line)
     te.manual = 0;
     te.manualX = 0;
     te.manualY = 0;
@@ -217,71 +187,6 @@ void enter_raw() {
 }
 
 
-void moveCursor(char dir) {
-    int temp;
-
-    if(te.manual == 0) {
-        te.manual = 1;
-        te.pos = te.currentLen;
-    }
-
-    switch(dir) {
-        case ARROW_UP:
-            if(te.y > (TOP_BANNER_LINES + 1)) {
-                te.manualY = te.y - 1;
-                te.manualX = te.x;
-                te.pos -= te.cols;
-            }
-            else {
-                if(te.currentOffset)
-                    te.currentOffset -= te.cols;
-            }
-            break;
-        
-        case ARROW_DOWN:
-            if(te.y < (te.rows - BOTTOM_BANNER_LINES)) {
-                te.manualY = te.y + 1;
-                te.manualX = te.x;
-                te.pos += te.cols;
-            }
-            else {
-                te.currentOffset += te.cols;
-            }
-            break;
-
-        case ARROW_LEFT:
-            if(te.x > 1) {
-                te.manualX = te.x - 1;
-                te.manualY = te.y;
-            }
-            else {
-                te.x = te.cols;
-                moveCursor(ARROW_UP);
-            }
-            te.pos -= 1;
-            break;
-        
-        case ARROW_RIGHT:
-            if(te.x < te.cols) {
-                te.manualX = te.x + 1;
-                te.manualY = te.y;
-            }
-            else {
-                te.x = 1;
-                moveCursor(ARROW_DOWN);
-            }
-            te.pos += 1;
-            break;
-
-        default:
-            error_log("MOVE CURSOR Invalid direction");
-            return;
-    }
-    
-    error_log("MOVE CURSOR applied (%d, %d) %d", te.manualX, te.manualY, te.pos);
-}
-
-
 char getPressedKey() {
     char c;
 
@@ -291,129 +196,6 @@ char getPressedKey() {
     }
 
     return c;
-}
-
-
-void processesCommand() {
-    char fc[4];
-    fc[0] = getPressedKey();
-    int processed = 1;
-
-    switch(fc[0]) {
-        case 127:
-            te.cmd--;
-            te.command[te.cmd] = 0;
-            break;
-
-        case IS_CTRL_KEY('q'):
-            te.flush = 1;
-            exit(0);
-            break;
-
-        case IS_CTRL_KEY('x'):
-            error_log("CMD Control x found!");
-            te.flush = 0;
-            exit(0);
-            break;
-
-        case IS_CTRL_KEY('g'):
-            error_log("CMD Control G found!");
-            te.p = 1;
-            break;
-
-        case ESC:
-            fc[1] = getPressedKey();
-            if(fc[1] == '[') {
-                fc[2] = getPressedKey();
-                switch(fc[2]) {
-                    case 'A':
-                        error_log("CMD UP");
-                        if(te.renderOffset > 0)
-                            te.renderOffset--;
-                        break;
-
-                    case 'B':
-                        error_log("CMD DOWN");
-                        if(te.renderOffset < (te.lines-1))
-                            te.renderOffset++;
-                        break;
-
-                    case 'C':
-                        error_log("CMD RIGHT");
-                        break;
-
-                    case 'D':
-                        error_log("CMD LEFT");
-                        break;
-
-                    default:
-                        error_log("Invalid escape sequence!");
-                }
-            }
-            break;
-
-        default:
-            if(te.mode == COMMAND_MODE) {
-                if(fc[0] == '\n' || fc[0] == '\r') {
-                    if(te.cmd > 0) {
-                        error_log("Found newline");
-                        if(te.p == 0) {
-                            te.mode = CONTENT_MODE;
-                            initContentMode();
-                        }
-                        else if(te.p == 1) {
-                            te.command[te.cmd] = 0;
-                            te.renderOffset = atoi(te.command) - 1;
-                            error_log("Going to %d", te.renderOffset);
-                            te.cmd = 0;
-                            te.command[0] = 0;
-                            te.p = 0;
-                        }
-                    }
-                    else {
-                        error_log("Simple enter");
-                    }
-                    break;
-                }
-                else {
-                    te.command[te.cmd++] = fc[0];
-                }
-                te.command[te.cmd] = 0;
-            }
-            break;
-    }
-}
-
-
-void renderData(int fromLine) {
-    error_log("Entered renderedData with %d", fromLine);
-
-    int i, j;
-    int rowsUsed = 0, spaceLeft = 0, temp;
-    char *lineNo = NULL;
-
-    for(i = fromLine ; i < te.lines && rowsUsed < (te.rows - TOP_BANNER_LINES - BOTTOM_BANNER_LINES) ; i++) {
-        lineNo = itoa(i+1);
-        temp = ((te.len[i] + strlen(lineNo) + 1) / te.cols) + 1;
-        // len + n to account for line number printing
-        if((rowsUsed + temp) >= (te.rows - TOP_BANNER_LINES - BOTTOM_BANNER_LINES))
-            break;
-        else
-            rowsUsed += temp; // rows that will be used by this line
-
-        printf("%s %s\n\r", lineNo, te.buf[i]);
-    }
-
-    if(rowsUsed < (te.rows - TOP_BANNER_LINES - BOTTOM_BANNER_LINES) && i != te.lines) {
-        printf("%s ", lineNo);
-        spaceLeft = ((te.rows - TOP_BANNER_LINES - BOTTOM_BANNER_LINES) - rowsUsed + 1) * te.cols;
-        spaceLeft -= (1 + strlen(lineNo));
-        error_log("Space left : %d", spaceLeft);
-        for(j = 0 ; j < te.len[i] && j < spaceLeft ; j++) {
-            printf("%c", te.buf[i][j]);
-        }
-    }
-    fflush(stdout);
 }
 
 
@@ -441,197 +223,4 @@ char *itoa(int i) {
     
     error_log("Returning ITOA : %s", ret);
     return ret;
-}
-
-
-void initContentMode() {
-    error_log("Initialising content mode");
-    
-    uint32_t command = atoi(te.command);
-    error_log("ATOI command = %d", command);
-
-    void *temp;
-    if(command > te.lines) {
-        error_log("Larger command line %d vs %d", command, te.lines);
-        int i = te.lines;
-        temp = realloc(te.buf, command * sizeof(char *));
-        if(temp) {
-            te.buf = temp;
-            temp = realloc(te.len, command * sizeof(int));
-            if(temp) {
-                te.len = temp;
-                for(i = te.lines ; i < command ; i++) {
-                    te.buf[i] = (char *)calloc(1, sizeof(char));
-                    te.len[i] = 0;
-                }
-                te.lines = command;
-            }
-            else {
-                perror("REALLOC error adding lines to len");
-                exit(0);
-            }
-        }
-        else {
-            perror("REALLOC error adding lines");
-            exit(0);
-        }
-    }
-    
-    te.currentLineNo = command;
-    te.currentLen = strlen(te.buf[command-1]);
-    te.currentLine = strdup(te.buf[command-1]);
-    te.currentAlloc = te.currentLen + 1024;
-    te.currentOffset = 0;
-
-    error_log("INIT CURRLEN %d", te.currentLen);
-
-    temp = realloc(te.currentLine, te.currentAlloc * sizeof(char));
-    if(temp)
-        te.currentLine = temp;
-    else {
-        perror("REALLOC currentLine");
-        exit(0);
-    }
-}
-
-
-void processContent() {
-    error_log("Entered processContent");
-
-    int temp = te.currentLineNo;
-    while(temp) {
-        te.x++;
-        temp /= 10;
-    }
-    error_log("BEFORE adding strings (%d, %d)", te.x, te.y);
-
-    te.x++;
-    te.x += te.currentLen;
-    error_log("BEFORE adjusting cols (%d, %d)", te.x, te.y);
-
-    while(te.x > te.cols) {
-        te.x -= te.cols;
-        te.y++;
-    }
-
-    printf("%d %s", te.currentLineNo, te.currentLine + te.currentOffset); fflush(stdout);
-    error_log("(x, y) = (%d, %d) ; %d %s", te.x, te.y, te.currentLineNo, te.currentLine);
-    
-    if(te.manual) {
-        gotoxy(te.manualY, te.manualX);
-        te.x = te.manualX;
-        te.y = te.manualY;
-        error_log("POS : %d", te.pos);
-    }
-
-    char c = getPressedKey();
-    error_log("Content key : %d", c);
-    switch(c) {
-        case IS_CTRL_KEY('k'):
-            error_log("Control K found!");
-            te.currentLen = 0;
-            te.currentLine[te.currentLen] = 0;
-            break;
-
-        case IS_CTRL_KEY('q'):
-            error_log("Control Q found!");
-            te.flush = 1;
-            exit(0);
-            break;
-
-        case IS_CTRL_KEY('x'):
-            error_log("Control x found!");
-            te.flush = 0;
-            exit(0);
-            break;
-
-        case ESC:
-            c = getPressedKey();
-            if(c == '[') {
-                c = getPressedKey();
-                switch(c) {
-                    case 'A':
-                        error_log("UP");
-                        moveCursor(ARROW_UP);
-                        break;
-
-                    case 'B':
-                        error_log("DOWN");
-                        moveCursor(ARROW_DOWN);
-                        break;
-
-                    case 'C':
-                        error_log("RIGHT");
-                        moveCursor(ARROW_RIGHT);
-                        break;
-
-                    case 'D':
-                        error_log("LEFT");
-                        moveCursor(ARROW_LEFT);
-                        break;
-
-                    default:
-                        error_log("Invalid escape sequence!");
-                }
-            }
-            break;
-        
-        case 127:
-            if(te.currentLen) {
-                error_log("Content bck : %c", te.currentLine[te.currentLen]);
-                te.currentLen--;
-                te.currentLine[te.currentLen] = 0;
-            }
-            break;
-
-        case '\n': case '\r':
-            free(te.buf[te.currentLineNo - 1]);
-            te.buf[te.currentLineNo - 1] = te.currentLine;
-            te.len[te.currentLineNo - 1] = te.currentLen;
-            te.currentAlloc = 0;
-            te.currentLen = 0;
-            te.currentLine = NULL;
-            te.currentLineNo = 0;
-            te.command[0] = 0;
-            te.cmd = 0;
-            te.manual = 0;
-            te.mode = COMMAND_MODE;
-            break;
-
-        default:
-            if(te.manual) {
-                if(te.pos >= te.currentLen) {
-                    error_log("pos >= len");
-                    while((te.pos+1) > te.currentAlloc) {
-                        te.currentAlloc += 1024;
-                        te.currentLine = realloc(te.currentLine, te.currentAlloc * sizeof(char));
-                    }
-                    int i;
-                    for(i = te.currentLen ; i < te.pos ; i++)
-                        te.currentLine[i] = ' ';
-                    te.currentLen = te.pos + 1;
-                }
-                else {
-                    te.currentLen += 1;
-                    if(te.currentLen > (te.currentAlloc - 1)) {
-                        te.currentAlloc += 1024;
-                        te.currentLine = realloc(te.currentLine, te.currentAlloc);
-                    }
-                    int i;
-                    for(i = te.currentLen ; i > te.pos ; i--)
-                        te.currentLine[i] = te.currentLine[i-1];
-                }
-                moveCursor(ARROW_RIGHT);
-            }
-            else{
-                te.currentLen += 1;
-                if(te.currentLen > (te.currentAlloc - 1)) {
-                    te.currentAlloc += 1024;
-                    te.currentLine = realloc(te.currentLine, te.currentAlloc);
-                }
-                te.pos = te.currentLen;
-            }
-            te.currentLine[te.pos - 1] = c;
-            error_log("ADDED Content key : %d", c);
-    }
 }

@@ -34,45 +34,47 @@
 
 /* -------------------- Globals -------------------- */
 
-uint32_t maxOnScreen, onScreen;
-uint16_t horizontal, vertical;
-
 char *currFile;
 int fileFD;
 
 typedef struct salteConfig {
+    // About the terminal
     struct termios old;    // terminal properties
+    uint16_t rows;       // available on terminal for drawing
+    uint16_t cols;
     
-    u_int32_t lines;        // Data
-    uint16_t *len;
-    char **buf;
-    uint8_t flush;
+    // About the data
+    u_int32_t lines;        // lines of data
+    uint16_t *len;          // length of lines
+    char **buf;             // data
+    uint8_t flush;          // auto save or not
+    uint16_t renderOffset;  // which line to start printing
 
+    // About the cursor
     uint16_t x;          // Cursor position
     uint16_t y;
-    uint16_t manual;
-    uint16_t manualX;
+    uint16_t manual;        // manual cursor movement = True or False
+    uint16_t manualX;       // cursor position
     uint16_t manualY;
-    uint16_t pos;       // cursor position within a line (if cursor is moved with arrows)
+    uint16_t pos;       // cursor position within a line (in buf) (if cursor is moved with arrows)
+    
+    // Current mode of execution == command / content mode
+    uint8_t mode;
 
-    uint16_t rows;       // available on terminal
-    uint16_t cols;
-
+    // About the prompt
     char **prompt;
     uint8_t p;
     uint16_t prompt_row;    // row to print prompt
     char command[25];       // command
     uint8_t cmd;            // length of command
 
-    uint8_t mode;
-
-    char *currentLine;      // CONTENT MODE
+    // About the content (i.e the chosen line)
+    char *currentLine;          // CONTENT MODE
     uint16_t currentLen;
     uint16_t currentAlloc;
     uint16_t currentLineNo;
     uint16_t currentOffset;
-
-    uint16_t renderOffset;
+    
 }salteConfig;
 
 salteConfig te;
@@ -82,16 +84,6 @@ salteConfig te;
 
 /* ---------- Signal Handlers ---------- */
 void handle_signals(int signo);
-
-/*
-Print SAL-TE banners on first and last row of terminal.
-*/
-void print_banners();
-
-/*
-Update data maintained about screen size and content!
-*/
-void updateOnScreen();
 
 /*
 Initalize the text editor, clear screen, print the header and position cursor on line 2 of terminal.
@@ -114,29 +106,9 @@ Read one character from STDIN.
 char getPressedKey();
 
 /*
-Process the key pressed (from getPressedKey). Handle control sequences.
-*/
-void processesCommand();
-
-/*
-Render the text content from line `fromLine`.
-*/
-void renderData(int fromLine);
-
-/*
-Initialise content mode.
-*/
-void initContentMode();
-
-/*
-Integer to string.
+Integer to (dynamically allocated) string.
 */
 char *itoa(int i);
-
-/*
-Process I/O
-*/
-void processContent();
 
 
 #endif

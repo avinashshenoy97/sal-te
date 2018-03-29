@@ -100,3 +100,114 @@ void gotoxy(uint32_t x, uint32_t y) {
     te.x = y;
     te.y = x;
 }
+
+
+void print_banners() {
+    struct winsize w;
+    ioctl(STDOUT_FILENO, TIOCGWINSZ, &w);
+
+    gotoxy(1, 1);
+    hprintf(centerify("SAL-TE : The Simple Af Line-based Text Editor!"));
+    hprintf(centerify(currFile));
+
+    gotoxy(w.ws_row, 1);
+    hprintf(centerify("; ^Q Quit ; ^X Quit without save ; ^K Clear Line ; ^G Goto Line ;"));
+
+    gotoxy(w.ws_row-2, 1);
+    hprintf(centerify("Control Section"));
+}
+
+
+void moveCursor(char dir) {
+    if(te.manual == 0) {
+        te.manual = 1;
+        te.pos = te.currentLen;
+    }
+
+    switch(dir) {
+        case ARROW_UP:
+            if(te.y > (TOP_BANNER_LINES + 1)) {
+                te.manualY = te.y - 1;
+                te.manualX = te.x;
+                te.pos -= te.cols;
+            }
+            else {
+                if(te.currentOffset)
+                    te.currentOffset -= te.cols;
+            }
+            break;
+        
+        case ARROW_DOWN:
+            if(te.y < (te.rows - BOTTOM_BANNER_LINES)) {
+                te.manualY = te.y + 1;
+                te.manualX = te.x;
+                te.pos += te.cols;
+            }
+            else {
+                te.currentOffset += te.cols;
+            }
+            break;
+
+        case ARROW_LEFT:
+            if(te.x > 1) {
+                te.manualX = te.x - 1;
+                te.manualY = te.y;
+            }
+            else {
+                te.x = te.cols;
+                moveCursor(ARROW_UP);
+            }
+            te.pos -= 1;
+            break;
+        
+        case ARROW_RIGHT:
+            if(te.x < te.cols) {
+                te.manualX = te.x + 1;
+                te.manualY = te.y;
+            }
+            else {
+                te.x = 1;
+                moveCursor(ARROW_DOWN);
+            }
+            te.pos += 1;
+            break;
+
+        default:
+            error_log("MOVE CURSOR Invalid direction");
+            return;
+    }
+    
+    error_log("MOVE CURSOR applied (%d, %d) %d", te.manualX, te.manualY, te.pos);
+}
+
+
+void renderData(int fromLine) {
+    error_log("Entered renderedData with %d", fromLine);
+
+    int i, j;
+    int rowsUsed = 0, spaceLeft = 0, temp;
+    char *lineNo = NULL;
+
+    for(i = fromLine ; i < te.lines && rowsUsed < (te.rows - TOP_BANNER_LINES - BOTTOM_BANNER_LINES) ; i++) {
+        lineNo = itoa(i+1);
+        temp = ((te.len[i] + strlen(lineNo) + 1) / te.cols) + 1;
+        // len + n to account for line number printing
+        if((rowsUsed + temp) >= (te.rows - TOP_BANNER_LINES - BOTTOM_BANNER_LINES))
+            break;
+        else
+            rowsUsed += temp; // rows that will be used by this line
+
+        printf("%s %s\n\r", lineNo, te.buf[i]);
+    }
+
+    if(rowsUsed < (te.rows - TOP_BANNER_LINES - BOTTOM_BANNER_LINES) && i != te.lines) {
+        printf("%s ", lineNo);
+        spaceLeft = ((te.rows - TOP_BANNER_LINES - BOTTOM_BANNER_LINES) - rowsUsed + 1) * te.cols;
+        spaceLeft -= (1 + strlen(lineNo));
+        error_log("Space left : %d", spaceLeft);
+        for(j = 0 ; j < te.len[i] && j < spaceLeft ; j++) {
+            printf("%c", te.buf[i][j]);
+        }
+    }
+    fflush(stdout);
+}

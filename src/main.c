@@ -5,7 +5,10 @@ The file that contains the main function and delegates work to other modules.
 /* -------------------- Includes -------------------- */
 #include "main.h"
 #include "salte.h"
+#include "salte_command.h"
+#include "salte_content.h"
 #include "op.h"
+
 
 #ifdef DEBUG_MODE
 static void error_log(char *fmt, ...);

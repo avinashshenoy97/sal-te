@@ -1,6 +1,6 @@
 srcfiles = ./src/
 includes = ./include/
-files = $(srcfiles)main.c $(srcfiles)salte.c $(srcfiles)op.c
+files = $(srcfiles)main.c $(srcfiles)salte.c $(srcfiles)op.c $(srcfiles)salte_command.c $(srcfiles)salte_content.c
 input = ./tests/test1
 log = ./tests/log1
 

@@ -76,5 +76,20 @@ Goto x, y on terminal.
 */
 void gotoxy(uint32_t x, uint32_t y);
 
+/*
+Print SAL-TE banners on first and last rows of terminal.
+*/
+void print_banners();
+
+/*
+Move the cursor in the direction `dir` as defined by macros : ARROW_UP ARROW_DOWN ARROW_LEFT ARROW_RIGHT.
+*/
+void moveCursor(char dir);
+
+/*
+Render the text content from line `fromLine`.
+*/
+void renderData(int fromLine);
+
 
 #endif
