@@ -149,15 +149,15 @@ void moveCursor(char dir) {
             break;
 
         case ARROW_LEFT:
-            if(te.x > 1) {
+            if(te.x > 3) {
                 te.manualX = te.x - 1;
                 te.manualY = te.y;
+                te.pos -= 1;
             }
             else {
-                te.x = te.cols;
-                moveCursor(ARROW_UP);
+                if(te.y > (TOP_BANNER_LINES + 1))
+                    moveCursor(ARROW_UP);
             }
-            te.pos -= 1;
             break;
         
         case ARROW_RIGHT:
